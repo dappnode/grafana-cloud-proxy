@@ -1,6 +1,14 @@
-# monitor-proxy
+# grafana-cloud-proxy
 
-`monitor-proxy` is a lightweight HTTP proxy that forwards telemetry traffic to Grafana Cloud and can automatically pause forwarding when a configured billing alert is firing.
+`grafana-cloud-proxy` is a lightweight HTTP proxy that forwards telemetry traffic to Grafana Cloud and can automatically pause forwarding when a configured billing alert is firing.
+
+This proxy implementation was built following Grafana's frontend observability data-proxy guidance:
+
+- https://grafana.com/docs/grafana-cloud/monitor-applications/frontend-observability/configure/data-proxy/
+
+For broader product and platform concepts, use the main Grafana Cloud documentation as reference:
+
+- https://grafana.com/docs/grafana-cloud/
 
 It uses a hybrid control model:
 
