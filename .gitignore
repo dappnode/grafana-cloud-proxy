@@ -1,0 +1,8 @@
+.env
+
+# Build outputs
+metrics-proxy
+tmp/
+
+# Editor and OS artifacts
+.DS_Store

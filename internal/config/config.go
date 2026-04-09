@@ -1,0 +1,51 @@
+package config
+
+import (
+	"log"
+	"os"
+	"time"
+)
+
+type Config struct {
+	GrafanaURL    string
+	GrafanaKey    string
+	AlertName     string
+	PollInterval  time.Duration
+	WebhookSecret string
+	Port          string
+	TargetURL     string
+}
+
+func LoadConfig() Config {
+	targetURL := os.Getenv("TARGET_URL")
+	if targetURL == "" {
+		log.Fatal("TARGET_URL environment variable is required")
+	}
+
+	port := getEnv("PORT", "8080")
+
+	var pollInterval time.Duration
+	intervalStr := getEnv("POLL_INTERVAL", "5m")
+	var err error
+	pollInterval, err = time.ParseDuration(intervalStr)
+	if err != nil {
+		log.Fatalf("Invalid POLL_INTERVAL: %v", err)
+	}
+
+	return Config{
+		GrafanaURL:    os.Getenv("GRAFANA_API_URL"),
+		GrafanaKey:    os.Getenv("GRAFANA_API_KEY"),
+		AlertName:     os.Getenv("ALERT_NAME"),
+		PollInterval:  pollInterval,
+		WebhookSecret: os.Getenv("GRAFANA_WEBHOOK_SECRET"),
+		Port:          port,
+		TargetURL:     targetURL,
+	}
+}
+
+func getEnv(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
