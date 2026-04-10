@@ -58,15 +58,29 @@ func (h *Handler) GrafanaWebhookHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Grafana webhook payloads use "status": "firing"|"resolved" (string),
+	// while the Alertmanager API uses "status": {"state": "..."} (object).
 	var payload struct {
-		Alerts []domain.Alert `json:"alerts"`
+		Alerts []struct {
+			Labels map[string]string `json:"labels"`
+			Status string            `json:"status"`
+		} `json:"alerts"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "invalid webhook payload", http.StatusBadRequest)
 		return
 	}
 
-	h.alertPoller.HandleWebhookAlerts(payload.Alerts)
+	alerts := make([]domain.Alert, len(payload.Alerts))
+	for i, a := range payload.Alerts {
+		alerts[i] = domain.Alert{
+			Labels: a.Labels,
+			Status: struct {
+				State string `json:"state"`
+			}{State: a.Status},
+		}
+	}
+	h.alertPoller.HandleWebhookAlerts(alerts)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{

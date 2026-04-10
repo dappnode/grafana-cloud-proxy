@@ -79,7 +79,7 @@ func TestHealthHandler_Blocked(t *testing.T) {
 func TestGrafanaWebhookHandler_UpdatesBlockedState(t *testing.T) {
 	h := newHandler(false)
 
-	body := []byte(`{"alerts":[{"labels":{"alertname":"Global Spend: 85% of $1"},"status":{"state":"firing"}}]}`)
+	body := []byte(`{"alerts":[{"labels":{"alertname":"Global Spend: 85% of $1"},"status":"firing"}]}`)
 	req := httptest.NewRequest(http.MethodPost, "/webhook/grafana", bytes.NewReader(body))
 	w := httptest.NewRecorder()
 
