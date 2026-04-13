@@ -16,6 +16,7 @@ type AlertPoller struct {
 	alertName    string
 	pollInterval time.Duration
 	blocked      atomic.Bool
+	stop         chan struct{}
 }
 
 func NewAlertPoller(provider ports.AlertProvider, alertName string, pollInterval time.Duration) *AlertPoller {
@@ -23,6 +24,7 @@ func NewAlertPoller(provider ports.AlertProvider, alertName string, pollInterval
 		provider:     provider,
 		alertName:    alertName,
 		pollInterval: pollInterval,
+		stop:         make(chan struct{}),
 	}
 }
 
@@ -52,7 +54,7 @@ func (p *AlertPoller) HandleWebhookAlerts(alerts []domain.Alert) {
 func (p *AlertPoller) setBlockedStateFromAlerts(alerts []domain.Alert, source string) {
 	firing := false
 	for _, alert := range alerts {
-		if !strings.Contains(alert.Labels["alertname"], p.alertName) {
+		if p.alertName == "" || !strings.Contains(alert.Labels["alertname"], p.alertName) {
 			continue
 		}
 
@@ -87,8 +89,18 @@ func (p *AlertPoller) Start() {
 	go func() {
 		ticker := time.NewTicker(p.pollInterval)
 		defer ticker.Stop()
-		for range ticker.C {
-			p.CheckAlertState()
+		for {
+			select {
+			case <-ticker.C:
+				p.CheckAlertState()
+			case <-p.stop:
+				return
+			}
 		}
 	}()
+}
+
+// Stop signals the polling goroutine to exit.
+func (p *AlertPoller) Stop() {
+	close(p.stop)
 }
