@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // Adapter implements ports.MetricsForwarder by forwarding HTTP requests to a target URL.
@@ -18,7 +19,7 @@ type Adapter struct {
 func NewAdapter(targetURL string) *Adapter {
 	return &Adapter{
 		targetURL: targetURL,
-		client:    &http.Client{},
+		client:    &http.Client{Timeout: 30 * time.Second},
 	}
 }
 
