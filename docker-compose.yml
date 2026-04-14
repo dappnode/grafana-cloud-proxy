@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: metrics-proxy
+    container_name: grafana-cloud-proxy
     restart: unless-stopped
     env_file:
       - .env

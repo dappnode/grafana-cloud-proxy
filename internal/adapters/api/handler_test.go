@@ -28,16 +28,16 @@ func (f *noopForwarder) Forward(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func newHandler(blocked bool) *Handler {
+func newHandler(blocked bool, proxyAuthHeader, proxyAuthValue string) *Handler {
 	mock := &mockAlertProvider{alerts: []domain.Alert{}}
 	poller := services.NewAlertPoller(mock, "Global Spend", time.Minute)
 	poller.SetBlocked(blocked)
 	svc := services.NewProxyService(poller, &noopForwarder{})
-	return NewHandler(svc, poller, "")
+	return NewHandler(svc, poller, "", proxyAuthHeader, proxyAuthValue)
 }
 
 func TestHealthHandler_Unblocked(t *testing.T) {
-	h := newHandler(false)
+	h := newHandler(false, "", "")
 
 	req := httptest.NewRequest("GET", "/health", nil)
 	w := httptest.NewRecorder()
@@ -59,7 +59,7 @@ func TestHealthHandler_Unblocked(t *testing.T) {
 }
 
 func TestHealthHandler_Blocked(t *testing.T) {
-	h := newHandler(true)
+	h := newHandler(true, "", "")
 
 	req := httptest.NewRequest("GET", "/health", nil)
 	w := httptest.NewRecorder()
@@ -77,7 +77,7 @@ func TestHealthHandler_Blocked(t *testing.T) {
 }
 
 func TestGrafanaWebhookHandler_UpdatesBlockedState(t *testing.T) {
-	h := newHandler(false)
+	h := newHandler(false, "", "")
 
 	body := []byte(`{"alerts":[{"labels":{"alertname":"Global Spend: 85% of $1"},"status":"firing"}]}`)
 	req := httptest.NewRequest(http.MethodPost, "/webhook/grafana", bytes.NewReader(body))
@@ -98,7 +98,7 @@ func TestGrafanaWebhookHandler_RequiresSecret(t *testing.T) {
 	mock := &mockAlertProvider{alerts: []domain.Alert{}}
 	poller := services.NewAlertPoller(mock, "Global Spend", time.Minute)
 	svc := services.NewProxyService(poller, &noopForwarder{})
-	h := NewHandler(svc, poller, "topsecret")
+	h := NewHandler(svc, poller, "topsecret", "", "")
 
 	body := []byte(`{"alerts":[]}`)
 	req := httptest.NewRequest(http.MethodPost, "/webhook/grafana", bytes.NewReader(body))
@@ -108,5 +108,52 @@ func TestGrafanaWebhookHandler_RequiresSecret(t *testing.T) {
 
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestProxyRoute_RequiresConfiguredHeaderValue(t *testing.T) {
+	h := newHandler(false, "X-Dappnode", "shared-secret")
+	mux := http.NewServeMux()
+	h.RegisterRoutes(mux)
+
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	w := httptest.NewRecorder()
+
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestProxyRoute_AllowsConfiguredHeaderValue(t *testing.T) {
+	h := newHandler(false, "X-Dappnode", "shared-secret")
+	mux := http.NewServeMux()
+	h.RegisterRoutes(mux)
+
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	req.Header.Set("X-Dappnode", "shared-secret")
+	w := httptest.NewRecorder()
+
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestProxyRoute_AllowsPresenceOnlyMode(t *testing.T) {
+	h := newHandler(false, "X-Dappnode", "")
+	mux := http.NewServeMux()
+	h.RegisterRoutes(mux)
+
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	req.Header.Set("X-Dappnode", "present")
+	w := httptest.NewRecorder()
+
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
 	}
 }

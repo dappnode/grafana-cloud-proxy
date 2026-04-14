@@ -7,13 +7,15 @@ import (
 )
 
 type Config struct {
-	GrafanaURL    string
-	GrafanaKey    string
-	AlertName     string
-	PollInterval  time.Duration
-	WebhookSecret string
-	Port          string
-	TargetURL     string
+	GrafanaURL      string
+	GrafanaKey      string
+	AlertName       string
+	PollInterval    time.Duration
+	WebhookSecret   string
+	ProxyAuthHeader string
+	ProxyAuthValue  string
+	Port            string
+	TargetURL       string
 }
 
 func LoadConfig() Config {
@@ -33,13 +35,15 @@ func LoadConfig() Config {
 	}
 
 	return Config{
-		GrafanaURL:    os.Getenv("GRAFANA_API_URL"),
-		GrafanaKey:    os.Getenv("GRAFANA_API_KEY"),
-		AlertName:     os.Getenv("ALERT_NAME"),
-		PollInterval:  pollInterval,
-		WebhookSecret: os.Getenv("GRAFANA_WEBHOOK_SECRET"),
-		Port:          port,
-		TargetURL:     targetURL,
+		GrafanaURL:      os.Getenv("GRAFANA_API_URL"),
+		GrafanaKey:      os.Getenv("GRAFANA_API_KEY"),
+		AlertName:       os.Getenv("ALERT_NAME"),
+		PollInterval:    pollInterval,
+		WebhookSecret:   os.Getenv("GRAFANA_WEBHOOK_SECRET"),
+		ProxyAuthHeader: os.Getenv("PROXY_AUTH_HEADER"),
+		ProxyAuthValue:  os.Getenv("PROXY_AUTH_VALUE"),
+		Port:            port,
+		TargetURL:       targetURL,
 	}
 }
 
