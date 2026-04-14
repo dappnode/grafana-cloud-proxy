@@ -1,0 +1,63 @@
+name: Build, Release, and Push Docker Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g., v1.2.3)"
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: write
+  actions: write
+
+jobs:
+  release-and-push:
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: eu-central-1
+      ECR_REGISTRY: 883233562864.dkr.ecr.eu-central-1.amazonaws.com
+      ECR_REPOSITORY: grafana-cloud-proxy
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Build grafana-cloud-proxy binary
+        run: go build -o grafana-cloud-proxy-${{ inputs.version }} ./cmd/main.go
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          files: |
+            grafana-cloud-proxy-${{ inputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::883233562864:role/gha-ecr-pusher
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push grafana-cloud-proxy Image
+        env:
+          IMAGE_URI: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ inputs.version }}
+        run: |
+          docker build -t "$IMAGE_URI" .
+          docker push "$IMAGE_URI"
