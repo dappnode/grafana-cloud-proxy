@@ -37,6 +37,7 @@ func newHandler(blocked bool, proxyAuthHeader, proxyAuthValue string) *Handler {
 }
 
 func TestHealthHandler_Unblocked(t *testing.T) {
+	resetBlockedRequestMetricsForTest()
 	h := newHandler(false, "", "")
 
 	req := httptest.NewRequest("GET", "/health", nil)
@@ -55,6 +56,9 @@ func TestHealthHandler_Unblocked(t *testing.T) {
 	}
 	if body["blocked"] != false {
 		t.Errorf("expected blocked=false")
+	}
+	if body["blocked_requests_last_hour"] != float64(0) {
+		t.Errorf("expected blocked_requests_last_hour=0, got %v", body["blocked_requests_last_hour"])
 	}
 }
 
@@ -112,6 +116,7 @@ func TestGrafanaWebhookHandler_RequiresSecret(t *testing.T) {
 }
 
 func TestProxyRoute_RequiresConfiguredHeaderValue(t *testing.T) {
+	resetBlockedRequestMetricsForTest()
 	h := newHandler(false, "X-Dappnode", "shared-secret")
 	mux := http.NewServeMux()
 	h.RegisterRoutes(mux)
@@ -124,9 +129,14 @@ func TestProxyRoute_RequiresConfiguredHeaderValue(t *testing.T) {
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d", w.Code)
 	}
+
+	if got := BlockedRequestsLastHour(); got != 1 {
+		t.Fatalf("expected blocked_requests_last_hour=1, got %d", got)
+	}
 }
 
 func TestProxyRoute_AllowsConfiguredHeaderValue(t *testing.T) {
+	resetBlockedRequestMetricsForTest()
 	h := newHandler(false, "X-Dappnode", "shared-secret")
 	mux := http.NewServeMux()
 	h.RegisterRoutes(mux)
@@ -139,6 +149,10 @@ func TestProxyRoute_AllowsConfiguredHeaderValue(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	if got := BlockedRequestsLastHour(); got != 0 {
+		t.Fatalf("expected blocked_requests_last_hour=0, got %d", got)
 	}
 }
 

@@ -41,8 +41,9 @@ func (h *Handler) HealthHandler(w http.ResponseWriter, r *http.Request) {
 		status = "blocked"
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":  status,
-		"blocked": blocked,
+		"status":                     status,
+		"blocked":                    blocked,
+		"blocked_requests_last_hour": BlockedRequestsLastHour(),
 	})
 }
 
@@ -55,7 +56,7 @@ func (h *Handler) GrafanaWebhookHandler(w http.ResponseWriter, r *http.Request) 
 	if h.alertPoller == nil {
 		http.Error(w, "alert polling is not configured", http.StatusServiceUnavailable)
 		return
-	}
+	} 
 
 	if !h.isWebhookAuthorized(r) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
