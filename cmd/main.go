@@ -36,7 +36,7 @@ func main() {
 	proxySvc := services.NewProxyService(poller, fwd)
 
 	// Create driving adapter (HTTP handler) and register routes
-	handler := api.NewHandler(proxySvc, poller, cfg.WebhookSecret)
+	handler := api.NewHandler(proxySvc, poller, cfg.WebhookSecret, cfg.ProxyAuthHeader, cfg.ProxyAuthValue)
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 
@@ -45,6 +45,9 @@ func main() {
 	log.Printf("Proxying requests to: %s", cfg.TargetURL)
 	if poller != nil {
 		log.Printf("Alert reconciliation poll interval: %s", cfg.PollInterval)
+	}
+	if cfg.ProxyAuthHeader != "" {
+		log.Printf("Proxy header gate enabled for header: %s", cfg.ProxyAuthHeader)
 	}
 	log.Printf("Allowed CORS origins: my.dappnode, dappmanager.dappnode, dappmanager.dappnode.private, my.dappnode.private")
 

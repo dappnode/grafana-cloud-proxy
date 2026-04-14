@@ -56,6 +56,8 @@ Recommended variables:
 - `ALERT_NAME`: substring match used to identify the cost-control alert
 - `POLL_INTERVAL`: reconciliation polling interval (default recommendation: `5m`)
 - `GRAFANA_WEBHOOK_SECRET`: shared secret for webhook authentication
+- `PROXY_AUTH_HEADER`: optional header name required on proxied requests
+- `PROXY_AUTH_VALUE`: optional expected value for `PROXY_AUTH_HEADER`; if unset, only header presence is required
 - `PORT`: HTTP server port (default `8080`)
 
 ## Run With Docker Compose (Production-like)
@@ -113,6 +115,17 @@ Expected payload shape includes an `alerts` array compatible with Grafana Alertm
   - accepts webhook payload and updates blocked state immediately
 - `POST /` (and other forwarded methods)
   - proxy endpoint for telemetry forwarding
+
+## Optional Proxy Header Gate
+
+To apply a lightweight filter before forwarding telemetry requests, configure:
+
+```bash
+PROXY_AUTH_HEADER=X-Dappnode
+PROXY_AUTH_VALUE=shared-secret
+```
+
+If `PROXY_AUTH_HEADER` is set, proxied requests must include that header. If `PROXY_AUTH_VALUE` is also set, the header must match exactly. This is only a simple gate and should not be treated as strong authentication.
 
 ## Testing
 

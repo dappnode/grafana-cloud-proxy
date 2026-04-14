@@ -12,16 +12,20 @@ import (
 
 // Handler is the driving adapter that exposes HTTP endpoints.
 type Handler struct {
-	proxyService  *services.ProxyService
-	alertPoller   *services.AlertPoller
-	webhookSecret string
+	proxyService    *services.ProxyService
+	alertPoller     *services.AlertPoller
+	webhookSecret   string
+	proxyAuthHeader string
+	proxyAuthValue  string
 }
 
-func NewHandler(proxyService *services.ProxyService, alertPoller *services.AlertPoller, webhookSecret string) *Handler {
+func NewHandler(proxyService *services.ProxyService, alertPoller *services.AlertPoller, webhookSecret, proxyAuthHeader, proxyAuthValue string) *Handler {
 	return &Handler{
-		proxyService:  proxyService,
-		alertPoller:   alertPoller,
-		webhookSecret: webhookSecret,
+		proxyService:    proxyService,
+		alertPoller:     alertPoller,
+		webhookSecret:   webhookSecret,
+		proxyAuthHeader: proxyAuthHeader,
+		proxyAuthValue:  proxyAuthValue,
 	}
 }
 
@@ -108,5 +112,5 @@ func (h *Handler) isWebhookAuthorized(r *http.Request) bool {
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/health", h.HealthHandler)
 	mux.HandleFunc("/webhook/grafana", h.GrafanaWebhookHandler)
-	mux.HandleFunc("/", CORSMiddleware(h.ProxyHandler))
+	mux.HandleFunc("/", CORSMiddleware(RequireProxyHeaderMiddleware(h.proxyAuthHeader, h.proxyAuthValue, h.ProxyHandler)))
 }

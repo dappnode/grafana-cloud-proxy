@@ -1,6 +1,7 @@
 package api
 
 import (
+	"crypto/subtle"
 	"net/http"
 	"strings"
 )
@@ -42,6 +43,27 @@ func CORSMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			} else {
 				w.WriteHeader(http.StatusForbidden)
 			}
+			return
+		}
+
+		next(w, r)
+	}
+}
+
+func RequireProxyHeaderMiddleware(headerName, expectedValue string, next http.HandlerFunc) http.HandlerFunc {
+	if strings.TrimSpace(headerName) == "" {
+		return next
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		providedValue := strings.TrimSpace(r.Header.Get(headerName))
+		if providedValue == "" {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		if expectedValue != "" && subtle.ConstantTimeCompare([]byte(providedValue), []byte(expectedValue)) != 1 {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
 
