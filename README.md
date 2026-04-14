@@ -110,7 +110,7 @@ Expected payload shape includes an `alerts` array compatible with Grafana Alertm
 ## API Endpoints
 
 - `GET /health`
-  - returns app health and current blocked state
+  - returns app health, current blocked state, and `blocked_requests_last_hour`
 - `POST /webhook/grafana`
   - accepts webhook payload and updates blocked state immediately
 - `POST /` (and other forwarded methods)
@@ -126,6 +126,8 @@ PROXY_AUTH_VALUE=shared-secret
 ```
 
 If `PROXY_AUTH_HEADER` is set, proxied requests must include that header. If `PROXY_AUTH_VALUE` is also set, the header must match exactly. This is only a simple gate and should not be treated as strong authentication.
+
+Rejected proxy requests are logged with method, path, client IP, and current `blocked_last_hour` count.
 
 ## Testing
 
