@@ -2,7 +2,7 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-cmd = "go build -o ./tmp/metrics-proxy ./cmd"
+cmd = "go build -buildvcs=false -o ./tmp/metrics-proxy ./cmd"
 bin = "./tmp/metrics-proxy"
 include_dir = ["cmd", "internal"]
 include_ext = ["go"]
