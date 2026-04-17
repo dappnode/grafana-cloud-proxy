@@ -1,0 +1,18 @@
+prometheus.scrape "metrics_proxy" {
+  targets         = [{"__address__" = "metrics-proxy:8080"}]
+  metrics_path    = "/metrics"
+  scrape_interval = "15s"
+  forward_to      = [prometheus.remote_write.metrics_hosted_prometheus.receiver]
+}
+
+prometheus.remote_write "metrics_hosted_prometheus" {
+  endpoint {
+    name = "hosted-prometheus"
+    url  = env("ALLOY_REMOTE_WRITE_URL")
+
+    basic_auth {
+      username = env("ALLOY_REMOTE_WRITE_USER")
+      password = env("ALLOY_REMOTE_WRITE_PASS")
+    }
+  }
+}

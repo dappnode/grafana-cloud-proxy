@@ -6,8 +6,8 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"sync"
-	"time"
+
+	"metrics-proxy/internal/metrics"
 )
 
 var allowedOrigins = map[string]bool{
@@ -21,17 +21,8 @@ var allowedOrigins = map[string]bool{
 	"https://my.dappnode.private":          true,
 }
 
-var blockedRequestMetrics = struct {
-	mu         sync.Mutex
-	timestamps []time.Time
-}{}
-
 func isOriginAllowed(origin string) bool {
 	return allowedOrigins[origin]
-}
-
-func isCORSHeader(headerKey string) bool {
-	return strings.HasPrefix(strings.ToLower(headerKey), "access-control-")
 }
 
 func CORSMiddleware(next http.HandlerFunc) http.HandlerFunc {
@@ -59,42 +50,6 @@ func CORSMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func BlockedRequestsLastHour() int {
-	now := time.Now()
-
-	blockedRequestMetrics.mu.Lock()
-	defer blockedRequestMetrics.mu.Unlock()
-
-	pruneBlockedRequestMetrics(now)
-	return len(blockedRequestMetrics.timestamps)
-}
-
-func recordBlockedRequest(now time.Time) int {
-	blockedRequestMetrics.mu.Lock()
-	defer blockedRequestMetrics.mu.Unlock()
-
-	pruneBlockedRequestMetrics(now)
-	blockedRequestMetrics.timestamps = append(blockedRequestMetrics.timestamps, now)
-
-	return len(blockedRequestMetrics.timestamps)
-}
-
-func pruneBlockedRequestMetrics(now time.Time) {
-	if len(blockedRequestMetrics.timestamps) == 0 {
-		return
-	}
-
-	cutoff := now.Add(-1 * time.Hour)
-	keepFrom := 0
-	for keepFrom < len(blockedRequestMetrics.timestamps) && blockedRequestMetrics.timestamps[keepFrom].Before(cutoff) {
-		keepFrom++
-	}
-
-	if keepFrom > 0 {
-		blockedRequestMetrics.timestamps = append([]time.Time(nil), blockedRequestMetrics.timestamps[keepFrom:]...)
-	}
-}
-
 func clientIPFromRequest(r *http.Request) string {
 	forwarded := r.Header.Get("X-Forwarded-For")
 	if forwarded != "" {
@@ -114,13 +69,6 @@ func clientIPFromRequest(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-func resetBlockedRequestMetricsForTest() {
-	blockedRequestMetrics.mu.Lock()
-	defer blockedRequestMetrics.mu.Unlock()
-
-	blockedRequestMetrics.timestamps = nil
-}
-
 func RequireProxyHeaderMiddleware(headerName, expectedValue string, next http.HandlerFunc) http.HandlerFunc {
 	if strings.TrimSpace(headerName) == "" {
 		return next
@@ -129,15 +77,15 @@ func RequireProxyHeaderMiddleware(headerName, expectedValue string, next http.Ha
 	return func(w http.ResponseWriter, r *http.Request) {
 		providedValue := strings.TrimSpace(r.Header.Get(headerName))
 		if providedValue == "" {
-			count := recordBlockedRequest(time.Now())
-			log.Printf("Blocked proxy request: missing required header %q method=%s path=%s ip=%s blocked_last_hour=%d", headerName, r.Method, r.URL.Path, clientIPFromRequest(r), count)
+			metrics.RequestsTotal.WithLabelValues("unauthorized").Inc()
+			log.Printf("Blocked proxy request: missing required header %q method=%s path=%s ip=%s", headerName, r.Method, r.URL.Path, clientIPFromRequest(r))
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
 
 		if expectedValue != "" && subtle.ConstantTimeCompare([]byte(providedValue), []byte(expectedValue)) != 1 {
-			count := recordBlockedRequest(time.Now())
-			log.Printf("Blocked proxy request: invalid header %q value method=%s path=%s ip=%s blocked_last_hour=%d", headerName, r.Method, r.URL.Path, clientIPFromRequest(r), count)
+			metrics.RequestsTotal.WithLabelValues("unauthorized").Inc()
+			log.Printf("Blocked proxy request: invalid header %q value method=%s path=%s ip=%s", headerName, r.Method, r.URL.Path, clientIPFromRequest(r))
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}

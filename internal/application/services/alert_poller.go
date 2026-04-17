@@ -8,6 +8,7 @@ import (
 
 	"metrics-proxy/internal/application/domain"
 	"metrics-proxy/internal/application/ports"
+	"metrics-proxy/internal/metrics"
 )
 
 // AlertPoller polls an AlertProvider to check if a billing alert is firing.
@@ -37,7 +38,7 @@ func (p *AlertPoller) SetBlocked(v bool) {
 }
 
 func (p *AlertPoller) CheckAlertState() {
-	log.Printf("[AlertPoller] Polling alert state (blocked=%v)", p.blocked.Load())
+	log.Printf("[AlertPoller] (poll) Polling alert '%s' — current state: blocked=%v", p.alertName, p.blocked.Load())
 	alerts, err := p.provider.FetchAlerts()
 	if err != nil {
 		log.Printf("[AlertPoller] %v", err)
@@ -69,6 +70,12 @@ func (p *AlertPoller) setBlockedStateFromAlerts(alerts []domain.Alert, source st
 
 	wasPreviouslyBlocked := p.blocked.Load()
 	p.blocked.Store(firing)
+
+	if firing {
+		metrics.AlertBlocked.Set(1)
+	} else {
+		metrics.AlertBlocked.Set(0)
+	}
 
 	if firing && !wasPreviouslyBlocked {
 		log.Printf("[AlertPoller] (%s) Alert '%s' is FIRING — blocking proxy", source, p.alertName)
