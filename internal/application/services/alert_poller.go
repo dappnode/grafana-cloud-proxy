@@ -37,6 +37,7 @@ func (p *AlertPoller) SetBlocked(v bool) {
 }
 
 func (p *AlertPoller) CheckAlertState() {
+	log.Printf("[AlertPoller] Polling alert state (blocked=%v)", p.blocked.Load())
 	alerts, err := p.provider.FetchAlerts()
 	if err != nil {
 		log.Printf("[AlertPoller] %v", err)
