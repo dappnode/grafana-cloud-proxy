@@ -110,11 +110,46 @@ Expected payload shape includes an `alerts` array compatible with Grafana Alertm
 ## API Endpoints
 
 - `GET /health`
-  - returns app health, current blocked state, and `blocked_requests_last_hour`
+  - returns app health and current blocked state
+- `GET /metrics`
+  - Prometheus metrics endpoint (see [Metrics](#metrics) below)
 - `POST /webhook/grafana`
   - accepts webhook payload and updates blocked state immediately
 - `POST /` (and other forwarded methods)
   - proxy endpoint for telemetry forwarding
+
+## Metrics
+
+The proxy exposes Prometheus metrics at `GET /metrics`. These are pushed to Grafana Cloud via a Grafana Alloy sidecar.
+
+### Exposed Metrics
+
+| Metric                           | Type      | Labels   | Description                                                         |
+| -------------------------------- | --------- | -------- | ------------------------------------------------------------------- |
+| `proxy_requests_total`           | Counter   | `status` | Total proxy requests by outcome                                     |
+| `proxy_request_duration_seconds` | Histogram | —        | Latency of forwarded requests                                       |
+| `proxy_blocked_by_alert`         | Gauge     | —        | Whether the proxy is currently blocked (`1`=blocked, `0`=unblocked) |
+
+The `status` label on `proxy_requests_total` has four values:
+
+- `forwarded` — request successfully proxied to the target
+- `blocked` — request rejected with 503 because billing alert is firing
+- `unauthorized` — request rejected with 401 due to missing or invalid auth header
+- `error` — forwarding to the target failed (502)
+
+### Grafana Alloy
+
+A [Grafana Alloy](https://grafana.com/docs/alloy/) sidecar container scrapes the `/metrics` endpoint and pushes metrics to Grafana Cloud via Prometheus `remote_write`. The Alloy configuration is in `alloy/config.alloy`.
+
+Alloy-specific environment variables:
+
+- `ALLOY_REMOTE_WRITE_URL`: Grafana Cloud Prometheus remote write URL
+- `ALLOY_REMOTE_WRITE_USER`: Grafana Cloud Prometheus username (numeric ID)
+- `ALLOY_REMOTE_WRITE_PASS`: Grafana Cloud API token with `MetricsPublisher` role
+
+Both `docker-compose.yml` and `docker-compose.dev.yml` include the Alloy sidecar. It scrapes the proxy every 15 seconds and forwards metrics to Grafana Cloud.
+
+A pre-built dashboard JSON is available at `grafana/dashboard.json` and can be imported into Grafana Cloud via **Dashboards → New → Import**.
 
 ## Optional Proxy Header Gate
 
@@ -127,7 +162,7 @@ PROXY_AUTH_VALUE=shared-secret
 
 If `PROXY_AUTH_HEADER` is set, proxied requests must include that header. If `PROXY_AUTH_VALUE` is also set, the header must match exactly. This is only a simple gate and should not be treated as strong authentication.
 
-Rejected proxy requests are logged with method, path, client IP, and current `blocked_last_hour` count.
+Rejected proxy requests are logged with method, path, and client IP, and increment the `proxy_requests_total{status="unauthorized"}` metric.
 
 ## Testing
 
