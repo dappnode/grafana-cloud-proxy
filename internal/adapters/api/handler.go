@@ -8,8 +8,6 @@ import (
 
 	"metrics-proxy/internal/application/domain"
 	"metrics-proxy/internal/application/services"
-
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Handler is the driving adapter that exposes HTTP endpoints.
@@ -114,6 +112,5 @@ func (h *Handler) isWebhookAuthorized(r *http.Request) bool {
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/health", h.HealthHandler)
 	mux.HandleFunc("/webhook/grafana", h.GrafanaWebhookHandler)
-	mux.Handle("/metrics", promhttp.Handler())
 	mux.HandleFunc("/", CORSMiddleware(RequireProxyHeaderMiddleware(h.proxyAuthHeader, h.proxyAuthValue, h.ProxyHandler)))
 }

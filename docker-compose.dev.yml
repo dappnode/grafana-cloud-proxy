@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  metrics-proxy:
+  grafana_cloud_proxy:
     build:
       context: .
       dockerfile: Dockerfile.dev
@@ -30,7 +30,7 @@ services:
       - run
       - /etc/alloy/config.alloy
     depends_on:
-      - metrics-proxy
+      - grafana_cloud_proxy
 
 volumes:
   go-mod-cache:

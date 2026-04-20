@@ -59,6 +59,7 @@ Recommended variables:
 - `PROXY_AUTH_HEADER`: optional header name required on proxied requests
 - `PROXY_AUTH_VALUE`: optional expected value for `PROXY_AUTH_HEADER`; if unset, only header presence is required
 - `PORT`: HTTP server port (default `8080`)
+- `METRICS_PORT`: internal metrics server port (default `9090`, not exposed to the host)
 
 ## Run With Docker Compose (Production-like)
 
@@ -109,18 +110,23 @@ Expected payload shape includes an `alerts` array compatible with Grafana Alertm
 
 ## API Endpoints
 
+Proxy API (port `8080`, exposed):
+
 - `GET /health`
   - returns app health and current blocked state
-- `GET /metrics`
-  - Prometheus metrics endpoint (see [Metrics](#metrics) below)
 - `POST /webhook/grafana`
   - accepts webhook payload and updates blocked state immediately
 - `POST /` (and other forwarded methods)
   - proxy endpoint for telemetry forwarding
 
+Metrics API (port `9090`, internal only — not exposed outside the container):
+
+- `GET /metrics`
+  - Prometheus metrics endpoint (see [Metrics](#metrics) below)
+
 ## Metrics
 
-The proxy exposes Prometheus metrics at `GET /metrics`. These are pushed to Grafana Cloud via a Grafana Alloy sidecar.
+The proxy exposes Prometheus metrics at `GET /metrics` on a dedicated internal server (port `9090`, default). This port is **not** exposed to the host — it is only reachable by other services on the same Docker network (e.g. Alloy). These are pushed to Grafana Cloud via a Grafana Alloy sidecar.
 
 ### Exposed Metrics
 
@@ -139,7 +145,7 @@ The `status` label on `proxy_requests_total` has four values:
 
 ### Grafana Alloy
 
-A [Grafana Alloy](https://grafana.com/docs/alloy/) sidecar container scrapes the `/metrics` endpoint and pushes metrics to Grafana Cloud via Prometheus `remote_write`. The Alloy configuration is in `alloy/config.alloy`.
+A [Grafana Alloy](https://grafana.com/docs/alloy/) sidecar container scrapes `GET /metrics` on port `9090` (internal Docker network) and pushes metrics to Grafana Cloud via Prometheus `remote_write`. The Alloy configuration is in `alloy/config.alloy`.
 
 Alloy-specific environment variables:
 

@@ -53,6 +53,14 @@ func main() {
 
 	server := &http.Server{Addr: addr, Handler: mux}
 
+	// Internal metrics server (not exposed outside the container)
+	metricsHandler := api.NewMetricsHandler()
+	metricsMux := http.NewServeMux()
+	metricsHandler.RegisterRoutes(metricsMux)
+	metricsAddr := ":" + cfg.MetricsPort
+	metricsServer := &http.Server{Addr: metricsAddr, Handler: metricsMux}
+	log.Printf("Starting metrics server on port %s (internal only)", cfg.MetricsPort)
+
 	// Graceful shutdown on SIGINT/SIGTERM
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -60,6 +68,12 @@ func main() {
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
+	go func() {
+		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Failed to start metrics server: %v", err)
 		}
 	}()
 
@@ -74,6 +88,9 @@ func main() {
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
 		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+	if err := metricsServer.Shutdown(ctx); err != nil {
+		log.Fatalf("Metrics server forced to shutdown: %v", err)
 	}
 
 	log.Println("Server stopped")

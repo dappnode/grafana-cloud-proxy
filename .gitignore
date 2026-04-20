@@ -2,6 +2,7 @@
 
 # Build outputs
 grafana-cloud-proxy
+grafana_cloud_proxy
 tmp/
 
 # Editor and OS artifacts
