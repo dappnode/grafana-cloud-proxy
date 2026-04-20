@@ -1,4 +1,4 @@
-name: Build, Release, and Push Docker Images
+name: Build and Push Alloy Image
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ on:
 
 permissions:
   id-token: write
-  contents: write
+  contents: read
   actions: write
 
 jobs:
@@ -20,33 +20,11 @@ jobs:
     env:
       AWS_REGION: eu-central-1
       ECR_REGISTRY: 883233562864.dkr.ecr.eu-central-1.amazonaws.com
-      ECR_REPOSITORY: grafana-cloud-proxy
+      ECR_REPOSITORY: grafana-cloud-alloy
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Run tests
-        run: go test ./...
-        working-directory: proxy
-
-      - name: Build grafana-cloud-proxy binary
-        run: go build -o ../grafana-cloud-proxy-${{ inputs.version }} ./cmd/main.go
-        working-directory: proxy
-
-      - name: Upload Release Assets
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ inputs.version }}
-          files: |
-            grafana-cloud-proxy-${{ inputs.version }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -57,9 +35,9 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and Push grafana-cloud-proxy Image
+      - name: Build and Push alloy Image
         env:
           IMAGE_URI: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ inputs.version }}
         run: |
-          docker build -t "$IMAGE_URI" ./proxy
+          docker build -t "$IMAGE_URI" ./alloy
           docker push "$IMAGE_URI"

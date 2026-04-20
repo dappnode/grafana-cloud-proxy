@@ -3,32 +3,29 @@ version: "3.8"
 services:
   metrics-proxy:
     build:
-      context: .
+      context: ./proxy
       dockerfile: Dockerfile.dev
     container_name: grafana-cloud-proxy-dev
     env_file:
       - .env
     command: ["air", "-c", ".air.toml"]
     volumes:
-      - ./:/app
+      - ./proxy:/app
       - go-mod-cache:/go/pkg/mod
       - go-build-cache:/root/.cache/go-build
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
 
   alloy:
-    image: grafana/alloy:latest
+    build:
+      context: ./alloy
+      dockerfile: Dockerfile
     container_name: grafana-cloud-alloy-dev
     restart: unless-stopped
-    volumes:
-      - ./alloy/config.alloy:/etc/alloy/config.alloy
     environment:
       - ALLOY_REMOTE_WRITE_URL=${ALLOY_REMOTE_WRITE_URL}
       - ALLOY_REMOTE_WRITE_USER=${ALLOY_REMOTE_WRITE_USER}
       - ALLOY_REMOTE_WRITE_PASS=${ALLOY_REMOTE_WRITE_PASS}
-    command:
-      - run
-      - /etc/alloy/config.alloy
     depends_on:
       - metrics-proxy
 

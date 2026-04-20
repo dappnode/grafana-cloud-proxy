@@ -2,7 +2,7 @@
 
 # Build outputs
 grafana-cloud-proxy
-tmp/
+proxy/tmp/
 
 # Editor and OS artifacts
 .DS_Store
