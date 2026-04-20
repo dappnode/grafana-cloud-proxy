@@ -15,6 +15,7 @@ type Config struct {
 	ProxyAuthHeader string
 	ProxyAuthValue  string
 	Port            string
+	MetricsPort     string
 	TargetURL       string
 }
 
@@ -25,6 +26,7 @@ func LoadConfig() Config {
 	}
 
 	port := getEnv("PORT", "8080")
+	metricsPort := getEnv("METRICS_PORT", "9090")
 
 	var pollInterval time.Duration
 	intervalStr := getEnv("POLL_INTERVAL", "5m")
@@ -43,6 +45,7 @@ func LoadConfig() Config {
 		ProxyAuthHeader: os.Getenv("PROXY_AUTH_HEADER"),
 		ProxyAuthValue:  os.Getenv("PROXY_AUTH_VALUE"),
 		Port:            port,
+		MetricsPort:     metricsPort,
 		TargetURL:       targetURL,
 	}
 }

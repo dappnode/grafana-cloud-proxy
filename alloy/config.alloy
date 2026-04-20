@@ -1,5 +1,5 @@
 prometheus.scrape "metrics_proxy" {
-  targets         = [{"__address__" = "metrics-proxy:8080"}]
+  targets         = [{"__address__" = "grafana_cloud_proxy:9090"}]
   metrics_path    = "/metrics"
   scrape_interval = "15s"
   forward_to      = [prometheus.remote_write.metrics_hosted_prometheus.receiver]
