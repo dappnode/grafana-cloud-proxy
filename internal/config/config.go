@@ -39,7 +39,7 @@ func LoadConfig() Config {
 	return Config{
 		GrafanaURL:      os.Getenv("GRAFANA_API_URL"),
 		GrafanaKey:      os.Getenv("GRAFANA_API_KEY"),
-		AlertName:       "proxy-test",//os.Getenv("ALERT_NAME"),
+		AlertName:       os.Getenv("ALERT_NAME"),
 		PollInterval:    pollInterval,
 		WebhookSecret:   os.Getenv("GRAFANA_WEBHOOK_SECRET"),
 		ProxyAuthHeader: os.Getenv("PROXY_AUTH_HEADER"),
